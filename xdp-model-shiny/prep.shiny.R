@@ -1,0 +1,26 @@
+library(tidyverse)
+library(ggplot2)
+library(sf)
+library(fs)
+
+#Copy all rds image files into the Shiny folder for direct access
+
+file_copy("images/boxploty.rds", "xdp-model-shiny/boxploty.rds")
+file_copy("images/arntl1.rds", "xdp-model-shiny/arntl1.rds")
+file_copy("images/atf21.rds", "xdp-model-shiny/atf21.rds")
+file_copy("images/dctn61.rds", "xdp-model-shiny/dctn61.rds")
+file_copy("images/perk1.rds", "xdp-model-shiny/perk1.rds")
+file_copy("images/gaba1.rds", "xdp-model-shiny/gaba1.rds")
+file_copy("images/gsk3b1.rds", "xdp-model-shiny/gsk3b1.rds")
+file_copy("images/hif1a1.rds", "xdp-model-shiny/hif1a1.rds")
+file_copy("images/hspb51.rds", "xdp-model-shiny/hspb51.rds")
+file_copy("images/nrcam1.rds", "xdp-model-shiny/nrcam1.rds")
+file_copy("images/p4ha11.rds", "xdp-model-shiny/p4ha11.rds")
+file_copy("images/relb1.rds", "xdp-model-shiny/relb1.rds")
+file_copy("images/p4ha11.rds", "xdp-model-shiny/p4ha11.rds")
+file_copy("images/traf61.rds", "xdp-model-shiny/traf61.rds")
+file_copy("images/xbp11.rds", "xdp-model-shiny/xbp11.rds")
+file_copy("images/stk361.rds", "xdp-model-shiny/stk361.rds")
+file_copy("images/all1.rds", "xdp-model-shiny/all1.rds")
+
+
