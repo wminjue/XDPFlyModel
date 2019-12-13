@@ -75,7 +75,7 @@ viabilitygene %>% select(gene, pknockgene) %>% unique()
 
 ```
 
-```{r viability, echo = F}
+```{r setup, echo = F}
 dir.create("rawdata")
 
 f923 <- read_xlsx("rawdata/923fly1.xlsx") %>% 
@@ -119,11 +119,97 @@ mf$gene[mf$week == 1013 & mf$gene == "control" & mf$analyst == "PD"] <- "control
 
 
 view(mf)
+```
 
-ggplot(mf, aes(fill = sex, x = gene, y = )) + geom_bar() + theme(axis.text.x = element_text(angle = 90))
+```{r allgenes, echo=F}
+ggplot(mf, aes(fill = sex, x = gene)) + geom_bar() + theme(axis.text.x = element_text(angle = 90))
+ggplot(mf, aes(fill = knockdown, x = gene)) + geom_bar() + theme(axis.text.x = element_text(angle = 90))
+```
 
-mf %>% 
+
+```{r eyecorrelation, echo = F}
+mf %>%
   filter(knockdown == "T") %>%
-  ggplot(aes(x = right, y = left)) + geom_point(shape = ".") + geom_jitter(aes(colour = gene, shape = pathway)) + geom_smooth(method = "lm") + theme(panel.background = element_rect(fill = "white", colour = "black", size = 0.5, linetype = "solid", color = "black")) + geom_hline(yintercept= c(0.5, 1.5, 2.5, 3.5), linetype="dashed")  + geom_vline(xintercept= c(0.5, 1.5, 2.5, 3.5), linetype="dashed")  + theme(legend.position = "bottom", legend.box = "vertical")
+  ggplot(aes(x = right, y = left)) + geom_point(shape = ".") + geom_jitter(aes(colour = gene, shape = pathway)) + geom_smooth(method = "lm") + theme(
+    panel.background = element_rect(
+      fill = "white",
+      colour = "black",
+      size = 0.5,
+      linetype = "solid",
+      color = "black"
+    )
+  ) + geom_hline(yintercept = c(0.5, 1.5, 2.5, 3.5), linetype = "dashed")  + geom_vline(xintercept = c(0.5, 1.5, 2.5, 3.5), linetype =                                        "dashed")  + theme(legend.position = "bottom", legend.box = "vertical")
+
+vialbility <- mf %>%
+  group_by(week, gene, vial) %>%
+  mutate(vialsum = n()) %>%
+  group_by(week, gene, vial, knockdown) %>%
+  mutate(kovialsum = n()) %>%
+  filter(knockdown == "F") %>%
+  select(gene, vial, right, left, vialsum, kovialsum, pathway) %>%
+  mutate(viability = (vialsum - kovialsum)/vialsum) %>%
+  unique() %>%
+  view() 
+
+ggplot(vialbility, aes(x = gene, y = viability, color = pathway)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 90))+ labs(title = "Viability of Knockdown Gene by Fly Proportions Per Vial", x = "Knockdown Gene", y = "Viability (% Mutant Fly/Vial Total)", color = "Pathway")
 
 ```
+
+```{r mappingxdp}
+library(maps)
+
+phil <- map_data("world", region = "Philippines")
+
+view(phil)
+
+ggplot(data = phil, aes(x = long, y = lat, group = region)) + scale_fill_viridis_d() + geom_polygon(aes(group = group, fill = subregion)) + theme(legend.position = "none")
+
+```
+
+```{r correlation}
+library(corrplot)
+mf2 <- mf 
+mf2$weekday[mf2$weekday == "M" ] <- 1
+mf2$weekday[mf2$weekday == "T" ] <- 2
+mf2$weekday[mf2$weekday == "W" ] <- 3
+mf2$weekday[mf2$weekday == "H" ] <- 4
+mf2$weekday[mf2$weekday == "F" ] <- 5
+
+mf2$sex[mf2$sex == "F" ] <- 1
+mf2$sex[mf2$sex == "M" ] <- 0
+
+mf2 <- mf2 %>%
+  mutate(survival = knockdown)
+
+mf2$survival[mf2$knockdown == "T" ] <- 1
+mf2$survival[mf2$knockdown == "F" ] <- 0
+
+mf2$iser[mf2$pathway == "ER Stress" ] <- 1
+mf2$iser[mf2$pathway != "ER Stress" ] <- 0
+mf2$isos[mf2$pathway == "Oxidative Stress" ] <- 1
+mf2$isos[mf2$pathway != "Oxidative Stress" ] <- 0
+mf2$isnfkb[mf2$pathway == "NFkB" ] <- 1
+mf2$isnfkb[mf2$pathway != "NFkB" ] <- 0
+
+mf2 <- mf2 %>%
+  select(weekday, sex, survival, left, right, iser, isos, isnfkb) %>%
+  transform(sex = as.numeric(sex), survival = as.numeric(survival), weekday = as.numeric(weekday))
+
+view(mf2)
+
+res <- cor(mf2, use = "complete.obs")
+
+col1 <- colorRampPalette(c("#7F0000", "red", "#FF7F00", "yellow", "white",
+                           "cyan", "#007FFF", "blue", "#00007F"))
+col2 <- colorRampPalette(c("#67001F", "#B2182B", "#D6604D", "#F4A582",
+                           "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE",
+                           "#4393C3", "#2166AC", "#053061"))
+col3 <- colorRampPalette(c("red", "white", "blue")) 
+col4 <- colorRampPalette(c("#7F0000", "red", "#FF7F00", "yellow", "#7FFF7F",
+                           "cyan", "#007FFF", "blue", "#00007F"))
+
+
+corrplot(res, type = "lower", order = "hclust", method = "ellipse", tl.cex = 1, tl.col = "black", tl.srt = 45,addrect = 2, col = col1(100), title = "
+         Correlation Between Eye Size, Survival, Weekday, and Pathways")
+```
+
