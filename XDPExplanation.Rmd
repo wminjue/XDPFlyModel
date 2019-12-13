@@ -1,0 +1,129 @@
+---
+title: "XDPFlyModel"
+author: "Minjue Wu"
+date: "12/12/2019"
+output: html_document
+---
+###Modeling X-linked Dystonia Parkinsonism Via A Novel Fly Model — 
+
+```{r loading, include=FALSE}
+library(lubridate)
+library(ggplot2)
+library(gganimate)
+library(janitor)
+library(animation)
+library(magick)
+library(readxl)
+library(knitr)
+library(tidyverse)
+library(dplyr)
+library(gt)
+library(tidyr)
+library(mapdata)
+```
+
+```{r statveri, include = FALSE}
+dir.create("statdata")
+
+#This database contains four weeks of fly model data, including target genes, sorter, weekday, number of surviving flies, phenotype, and sizes of the right and left eye of every mutant fly. I gathered the dataset and cleaned it from scratch, as the datasheets used by the student researchers were completely unusable for code processing purposes. 
+
+#Read in stats data sheets
+
+f923p <- read_xlsx("statdata/923fly.xlsx") %>% 
+  mutate(week = 0923)
+
+f930p <- read_xlsx("statdata/930fly.xlsx") %>% 
+  mutate(week = 0930)
+
+f106p <- read_xlsx("statdata/106fly.xlsx") %>% 
+  mutate(week = 1006)
+
+f1013p <- read_xlsx("statdata/1013fly.xlsx") %>% 
+  mutate(week = 1013)
+
+#clear away datasets that have 0s as this should only record units of flies
+
+mfp <- rbind(f923p, f930p, f106p, f1013p) %>%
+  filter(amt != 0) 
+
+#Calculate viability data for each vial and each gene every week (controls are repeated, so need to differentiate by week). 
+
+viabilitygene <- mfp %>%
+  group_by(week, gene, vial) %>%
+  mutate(vialsum = sum(amt)) %>% 
+  group_by(week, gene) %>%
+  mutate(genesum = sum(amt))
+ 
+viabilitygene <- viabilitygene %>%
+  filter(knockdown == "T") %>%
+  group_by(week, gene, vial) %>% 
+  mutate(knockvial = sum(amt)) %>%
+  group_by(week, gene) %>%
+  mutate(knockgene = sum(amt)) 
+
+#Calculate the percent viability for each vial and each gene
+
+viabilitygene <- viabilitygene %>%
+  mutate(pknockvial = 100*round(knockvial/vialsum, digits = 4)) %>%
+  mutate(pknockgene = 100*round(knockgene/genesum, digits = 4)) 
+
+view(viabilitygene)
+
+#Generate table of statistics for each gene for verification of functional code later 
+
+viabilitygene %>% select(gene, pknockgene) %>% unique()
+
+```
+
+```{r viability, echo = F}
+dir.create("rawdata")
+
+f923 <- read_xlsx("rawdata/923fly1.xlsx") %>% 
+  mutate(week = 0923)
+
+f930 <- read_xlsx("rawdata/930fly1.xlsx") %>% 
+  mutate(week = 0930)
+
+f106 <- read_xlsx("rawdata/106fly1.xlsx") %>% 
+  mutate(week = 1006)
+
+f1013 <- read_xlsx("rawdata/1013fly1.xlsx") %>% 
+  mutate(week = 1013)
+
+mf <- rbind(f923, f930, f106, f1013) %>%
+  mutate(pathway = "CMAP Hit") %>%
+  na.omit
+
+#Add gene pathway significance
+
+mf$pathway <- as.character(mf$pathway)
+
+mf$pathway[mf$gene == "ATF2" |
+          mf$gene ==  "XBP1" |
+          mf$gene == "EIF2AK3/PERK"] <- "ER Stress"
+
+mf$pathway[mf$gene == "HIF1A" |
+             mf$gene ==  "MAPK1" |
+             mf$gene == "P4HA1"] <- "Oxidative Stress" 
+
+mf$pathway[mf$gene == "RELB" |
+             mf$gene ==  "TRAF6"] <- "NFkB" 
+
+view(mf)
+
+mf$gene[mf$week == 923 & mf$gene == "control"] <- "control wk1" 
+mf$gene[mf$week == 930 & mf$gene == "control"] <- "control wk2" 
+mf$gene[mf$week == 106 & mf$gene == "control"] <- "control wk3" 
+mf$gene[mf$week == 1013 & mf$gene == "control" & mf$analyst == "TS"] <- "control wk4.1" 
+mf$gene[mf$week == 1013 & mf$gene == "control" & mf$analyst == "PD"] <- "control wk4.2" 
+
+
+view(mf)
+
+ggplot(mf, aes(fill = sex, x = gene, y = )) + geom_bar() + theme(axis.text.x = element_text(angle = 90))
+
+mf %>% 
+  filter(knockdown == "T") %>%
+  ggplot(aes(x = right, y = left)) + geom_point(shape = ".") + geom_jitter(aes(colour = gene, shape = pathway)) + geom_smooth(method = "lm") + theme(panel.background = element_rect(fill = "white", colour = "black", size = 0.5, linetype = "solid", color = "black")) + geom_hline(yintercept= c(0.5, 1.5, 2.5, 3.5), linetype="dashed")  + geom_vline(xintercept= c(0.5, 1.5, 2.5, 3.5), linetype="dashed")  + theme(legend.position = "bottom", legend.box = "vertical")
+
+```
