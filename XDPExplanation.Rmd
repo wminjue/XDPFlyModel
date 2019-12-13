@@ -124,6 +124,9 @@ view(mf)
 ```{r allgenes, echo=F}
 ggplot(mf, aes(fill = sex, x = gene)) + geom_bar() + theme(axis.text.x = element_text(angle = 90))
 ggplot(mf, aes(fill = knockdown, x = gene)) + geom_bar() + theme(axis.text.x = element_text(angle = 90))
+
+ggplot(mf, aes(fill = knockdown, x = gene, color = sex)) + geom_bar(position = position_dodge()) + theme(axis.text.x = element_text(angle = 90)) + scale_fill_brewer(palette="Greens") + theme_minimal() + theme(axis.text.x = element_text(angle = 90))
+
 ```
 
 
@@ -146,13 +149,25 @@ vialbility <- mf %>%
   group_by(week, gene, vial, knockdown) %>%
   mutate(kovialsum = n()) %>%
   filter(knockdown == "F") %>%
-  select(gene, vial, right, left, vialsum, kovialsum, pathway) %>%
-  mutate(viability = (vialsum - kovialsum)/vialsum) %>%
+  select(date, gene, vial, right, left, vialsum, kovialsum, pathway) %>%
+  mutate(viability = 100*round((vialsum - kovialsum)/vialsum, digits = 4)) %>%
   unique() %>%
   view() 
 
 ggplot(vialbility, aes(x = gene, y = viability, color = pathway)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 90))+ labs(title = "Viability of Knockdown Gene by Fly Proportions Per Vial", x = "Knockdown Gene", y = "Viability (% Mutant Fly/Vial Total)", color = "Pathway")
 
+
+vialbility2 <- mf %>%
+  group_by(date, gene, vial) %>%
+  mutate(vialsum = n()) %>%
+  group_by(date, gene, vial, knockdown) %>%
+  mutate(kovialsum = n()) %>%
+  filter(knockdown == "F") %>%
+  select(date, gene, vial, right, left, vialsum, kovialsum, pathway) %>%
+  mutate(viability = 100*round((vialsum - kovialsum)/vialsum, digit = 4)) %>%
+  unique() 
+
+ggplot(vialbility2, aes(x = date, y = viability)) + geom_point() + geom_jitter() + geom_smooth(method = "lm") + ylim(0,100) + labs(title = "Changes in Viability Over Time", subtitle = "",caption = "Viability calculated for flies counted per vial each day from all gene knockdowns.")
 ```
 
 ```{r mappingxdp}
