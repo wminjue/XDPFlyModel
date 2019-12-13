@@ -4,7 +4,7 @@ author: "Minjue Wu"
 date: "12/12/2019"
 output: html_document
 ---
-###Modeling X-linked Dystonia Parkinsonism Via A Novel Fly Model — 
+### Modeling X-linked Dystonia Parkinsonism Via A Novel Fly Model 
 
 ```{r loading, include=FALSE}
 library(lubridate)
@@ -22,7 +22,7 @@ library(tidyr)
 library(mapdata)
 ```
 
-```{r statveri, include = FALSE}
+```{r statveri, include = FALSE, message = F}
 dir.create("statdata")
 
 #This database contains four weeks of fly model data, including target genes, sorter, weekday, number of surviving flies, phenotype, and sizes of the right and left eye of every mutant fly. I gathered the dataset and cleaned it from scratch, as the datasheets used by the student researchers were completely unusable for code processing purposes. 
@@ -75,7 +75,7 @@ viabilitygene %>% select(gene, pknockgene) %>% unique()
 
 ```
 
-```{r setup, echo = F}
+```{r setup, echo = F, warning = F, message = F}
 dir.create("rawdata")
 
 f923 <- read_xlsx("rawdata/923fly1.xlsx") %>% 
@@ -93,6 +93,8 @@ f1013 <- read_xlsx("rawdata/1013fly1.xlsx") %>%
 mf <- rbind(f923, f930, f106, f1013) %>%
   mutate(pathway = "CMAP Hit") %>%
   na.omit
+
+mf$weekday[mf$weekday == "Th"] <- "H"
 
 #Add gene pathway significance
 
@@ -121,16 +123,22 @@ mf$gene[mf$week == 1013 & mf$gene == "control" & mf$analyst == "PD"] <- "control
 view(mf)
 ```
 
-```{r allgenes, echo=F}
-ggplot(mf, aes(fill = sex, x = gene)) + geom_bar() + theme(axis.text.x = element_text(angle = 90))
-ggplot(mf, aes(fill = knockdown, x = gene)) + geom_bar() + theme(axis.text.x = element_text(angle = 90))
+```{r allgenes, echo=F, warning = F, message = F}
+#Make a graph showing raw numbers of flies counted, showing one for distribution of sex and another for the distribution of knockdown across all genes. 
+ggplot(mf, aes(fill = sex, x = gene)) + geom_bar() + theme(axis.text.x = element_text(angle = 90)) + labs(title = "Sex Distribution in Flies Counted", x = "Knockdown Gene", y = "Number of Flies")
 
-ggplot(mf, aes(fill = knockdown, x = gene, color = sex)) + geom_bar(position = position_dodge()) + theme(axis.text.x = element_text(angle = 90)) + scale_fill_brewer(palette="Greens") + theme_minimal() + theme(axis.text.x = element_text(angle = 90))
+ggplot(mf, aes(fill = knockdown, x = gene)) + geom_bar() + theme(axis.text.x = element_text(angle = 90))+ labs(title = "Knockdown Fly Distribution in Flies Counted", x = "Knockdown Gene", y = "Number of Flies")
+
+#Make bar graph showing fly distributions in each gene compared to the controls of that week. Knockdown and sex are portrayed as percentages on one graph to demonstrate deviations from the control group. 
+  
+mf  %>% ggplot(aes(fill = sex, x = gene, color = knockdown)) + geom_bar(position="fill") + theme(axis.text.x = element_text(angle = 90)) + scale_fill_brewer(palette="Greens") + theme_minimal() + theme(axis.text.x = element_text(angle = 90)) + labs(title = "Percentage of Sex and Knockdown Fly for Each Gene", subtitle = "Counts include data from all vials for a specific gene; blue outline indicates rescue", x = "Knockdown Gene", y = "Percentage", color = "Knockdown", fill = "Sex") 
 
 ```
 
 
-```{r eyecorrelation, echo = F}
+```{r eyecorrelation, echo = F, warning = F, message = F}
+#Scatterplot of eye correlation between right and left eye sizes for every gene. Since there are only 5 possible values on both axes, I jittered the points and used dashed lines to indicate concentration in a particular size match.
+
 mf %>%
   filter(knockdown == "T") %>%
   ggplot(aes(x = right, y = left)) + geom_point(shape = ".") + geom_jitter(aes(colour = gene, shape = pathway)) + geom_smooth(method = "lm") + theme(
@@ -141,7 +149,16 @@ mf %>%
       linetype = "solid",
       color = "black"
     )
-  ) + geom_hline(yintercept = c(0.5, 1.5, 2.5, 3.5), linetype = "dashed")  + geom_vline(xintercept = c(0.5, 1.5, 2.5, 3.5), linetype =                                        "dashed")  + theme(legend.position = "bottom", legend.box = "vertical")
+  ) + geom_hline(yintercept = c(0.5, 1.5, 2.5, 3.5), linetype = "dashed")  + geom_vline(xintercept = c(0.5, 1.5, 2.5, 3.5), linetype =                                        "dashed")  + theme(legend.position = "bottom", legend.box = "vertical") + labs(
+    title = "Linear Correlation Model of Eye Size",
+    x = "Right Eye Size",
+    y = "Left Eye Size",
+    color = "Gene",
+    shape = "Pathway",
+    subtitle = "Positive Trend Noted for Eye Sizes, Indicating Knockdown Rescues Tend to Rescue Both Eyes"
+  )
+
+#Calculating viability by each vial to plot boxplots based on the ten knockdown fly survival rates, one for each of the ten vials, corresponding to each gene knockdown. This boxplot shows the viability this way to emphasize gene specific differences, and a large box indicates increased error, such as with the STRKR gene.  
 
 vialbility <- mf %>%
   group_by(week, gene, vial) %>%
@@ -151,11 +168,11 @@ vialbility <- mf %>%
   filter(knockdown == "F") %>%
   select(date, gene, vial, right, left, vialsum, kovialsum, pathway) %>%
   mutate(viability = 100*round((vialsum - kovialsum)/vialsum, digits = 4)) %>%
-  unique() %>%
-  view() 
+  unique() 
 
 ggplot(vialbility, aes(x = gene, y = viability, color = pathway)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 90))+ labs(title = "Viability of Knockdown Gene by Fly Proportions Per Vial", x = "Knockdown Gene", y = "Viability (% Mutant Fly/Vial Total)", color = "Pathway")
 
+#Calculating viability by each day, gene, and vial to show a scatterplot of trends in viability as the winter comes. Flies are known to hatch later, produce smaller numbers of offspring, and have more aberrant genetic anomaly expression as the winter comes. Looking at this data, it does seem that the later weeks saw a greater increase in very high viability in some samples while the majority of the data is still clustered around the bottom, and we did not see a more significant rescue in later weeks than in earlier weeks, which could indicate that the fly viabilities are indeed expressing different weather based trends. 
 
 vialbility2 <- mf %>%
   group_by(date, gene, vial) %>%
@@ -165,12 +182,43 @@ vialbility2 <- mf %>%
   filter(knockdown == "F") %>%
   select(date, gene, vial, right, left, vialsum, kovialsum, pathway) %>%
   mutate(viability = 100*round((vialsum - kovialsum)/vialsum, digit = 4)) %>%
-  unique() 
+  unique()
+ggplot(vialbility2, aes(x = date, y = viability, color = gene)) + geom_point() + geom_jitter() + geom_smooth(method = "lm", color="black") + ylim(0,100) + labs(title = "Changes in Viability Over Time", subtitle = "Percentage of Surviving Knockdown Flies out of Total Vial Population", color = "Knockdown Gene", caption = "Viability calculated for flies counted daily per vial.", x = "Date", y = "Viability") + guides(col = guide_legend(nrow = 10))
 
-ggplot(vialbility2, aes(x = date, y = viability)) + geom_point() + geom_jitter() + geom_smooth(method = "lm") + ylim(0,100) + labs(title = "Changes in Viability Over Time", subtitle = "",caption = "Viability calculated for flies counted per vial each day from all gene knockdowns.")
+vialbility3 <- mf %>%
+  group_by(weekday, gene, vial) %>%
+  mutate(vialsum = n()) %>%
+  group_by(weekday, gene, vial, knockdown) %>%
+  mutate(kovialsum = n()) %>%
+  filter(knockdown == "F") %>%
+  select(weekday, gene, vial, right, left, vialsum, kovialsum, pathway) %>%
+  mutate(viability = 100*round((vialsum - kovialsum)/vialsum, digit = 4)) %>%
+  unique()
+
+vialbility3$weekday[vialbility3$weekday == "M"] <- 1
+vialbility3$weekday[vialbility3$weekday == "T"] <- 2
+vialbility3$weekday[vialbility3$weekday == "W"] <- 3
+vialbility3$weekday[vialbility3$weekday == "H"] <- 4
+vialbility3$weekday[vialbility3$weekday == "F"] <- 5
+
+vialbility3$weekday <- as.numeric(vialbility3$weekday)
+
+# Formerly used to rearrange axis: vialbility3$weekday = factor(vialbility3$weekday, levels = c("M", "T", "W", "H", "F"))
+
+ggplot(vialbility3, aes(x = weekday, y = viability, color = gene)) + geom_point() + geom_jitter() + geom_smooth(method = "lm", color="black") + ylim(0,100) + labs(title = "Changes in Viability Over Days of the Week", subtitle = "Percentage of Surviving Knockdown Flies out of Total Vial Population", color = "Knockdown Gene", caption = "Viability calculated for flies counted daily per vial.", x = "Day of Week(1-5 = M-F)", y = "Viability") + guides(col = guide_legend(nrow = 10)) + geom_smooth(method = "lm", color = "black")
 ```
 
-```{r mappingxdp}
+```{r piechart, echo = F, message = F}
+eyebility <- mf %>%
+  filter(knockdown == "T") %>%
+  group_by(week, gene) %>%
+  select(-date, -weekday, -sex, -knockdown, -pathway, -week) %>%
+  view()
+```
+
+
+
+```{r mappingxdp, include = F}
 library(maps)
 
 phil <- map_data("world", region = "Philippines")
@@ -181,8 +229,11 @@ ggplot(data = phil, aes(x = long, y = lat, group = region)) + scale_fill_viridis
 
 ```
 
-```{r correlation}
+```{r correlation, echo = F, warning = F, message = F}
 library(corrplot)
+
+#Making a correlation plot between the day of the week, sex (females tended to hatch more than males), pathway (some pathways might be more beneficial to knockdown than others), and eye size. Since correlation plots don't respond to categorical variables, I changed the day of the week from 1-5, as we observed an increasing number of knockdown flies survive at the end of the week compared to the beginning, indicating there might be unexpected chromosomal breakdown in flies who are born later if they produce significantly more knockdown flies than usual.
+
 mf2 <- mf 
 mf2$weekday[mf2$weekday == "M" ] <- 1
 mf2$weekday[mf2$weekday == "T" ] <- 2
@@ -190,14 +241,20 @@ mf2$weekday[mf2$weekday == "W" ] <- 3
 mf2$weekday[mf2$weekday == "H" ] <- 4
 mf2$weekday[mf2$weekday == "F" ] <- 5
 
+#Sex numerical assignment: Does being female increase knockdown survival rate more than males? 
+
 mf2$sex[mf2$sex == "F" ] <- 1
 mf2$sex[mf2$sex == "M" ] <- 0
 
 mf2 <- mf2 %>%
   mutate(survival = knockdown)
 
+#Survival is 1; death is 0.
+
 mf2$survival[mf2$knockdown == "T" ] <- 1
 mf2$survival[mf2$knockdown == "F" ] <- 0
+
+#Are pathways involved in knockdown fly survival rescue? Weight each of the special pathways (ER stress, Oxidative stress, and NFkB) with 1 or 0
 
 mf2$iser[mf2$pathway == "ER Stress" ] <- 1
 mf2$iser[mf2$pathway != "ER Stress" ] <- 0
@@ -210,8 +267,6 @@ mf2 <- mf2 %>%
   select(weekday, sex, survival, left, right, iser, isos, isnfkb) %>%
   transform(sex = as.numeric(sex), survival = as.numeric(survival), weekday = as.numeric(weekday))
 
-view(mf2)
-
 res <- cor(mf2, use = "complete.obs")
 
 col1 <- colorRampPalette(c("#7F0000", "red", "#FF7F00", "yellow", "white",
@@ -223,8 +278,9 @@ col3 <- colorRampPalette(c("red", "white", "blue"))
 col4 <- colorRampPalette(c("#7F0000", "red", "#FF7F00", "yellow", "#7FFF7F",
                            "cyan", "#007FFF", "blue", "#00007F"))
 
+#I used a shade based corrplot because it was easier to see than the circular models and covers more area visually, and used a custom palette to make the relatively weak correlation scores easier to distinguish. Since there are limited metrics for the each of the data output (only integer scores from 0-4), there may be better ways of using more varied data based on the viabilities directly.
 
-corrplot(res, type = "lower", order = "hclust", method = "ellipse", tl.cex = 1, tl.col = "black", tl.srt = 45,addrect = 2, col = col1(100), title = "
+corrplot(res, type = "lower", order = "hclust", method = "shade", addCoef.col = "black", tl.cex = 1, tl.col = "black", tl.srt = 45,addrect = 2, col = col1(100), title = "
          Correlation Between Eye Size, Survival, Weekday, and Pathways")
 ```
 
