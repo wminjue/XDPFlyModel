@@ -10,31 +10,44 @@ library(animation)
 library(magick)
 library(readxl)
 library(knitr)
-library(tidyverse)
+library(janitor)
+library(reshape2)
+library(psych)
+library(ggcorrplot)
+library(scales)
+library(plotly)
+library(shinythemes)
+library(htmltools)
 library(dplyr)
 library(gt)
 library(tidyr)
 library(mapdata)
+library(ggcorrplot)
+library(png)
 library(corrplot)
 library(tidyverse)
+
+
+
+
+
+
+
+#Create list of genes for users to scroll through on the second tab, and factors for the 
+#overall bar plot distributions on the "What is XDP?" section.
+factors <- c("Sex", "Knockdown", "Percent Viability")
 
 gene_names <- c("All", "ARNTL", "ATF2", "DCTN6", "EIF2AK3/PERK", "GABBR1", 
                 "GSK3B", "HIF1A", "hSPB5/BIP/GRP78", "MAPK1", "NRCAM", "P4HA1", "RELB", 
                 "STK36", "TRAF6", "XBP1")
 
 #Read in all of my graphs from the prep shiny so I can display them in the tabs more easily.
-#I want to figure out how to do the ggplots on my app.R in the future to save on
-#code and space
-
-#Create list of anime for users to scroll through on the first tab
-
-#Provide two scrolls on the front page so people can cross compare
-#popularity and rank trends between different popular anime simultaneously,
-#instead of clicking back and forth across a faceted graph
-
-#Provided separate statistical modeling combining all the datasets
-#on second tab to show overall trends and ues as a baseline to point
-#out deviations on the first tab
+#I initially used the more efficient framework of feeding user inputs into temporary 
+#dataframes and transforming them, but a series of crashes last week made it impossible
+#to do it in another way. The plots attached here have also encountered trouble with
+#errors saying "In gzfile(file, "rb") : cannot open compressed file 'xxx.rds', probable
+#reason 'No such file or directory'". Uploading Shiny has been sporadic, and I have tried
+#streamlining comments as much as I can to make this process less painful. 
 
 bosploty <- read_rds("boxploty.rds")
 arntl1 <- read_rds("arntl1.rds")
@@ -52,6 +65,13 @@ stk361 <- read_rds("stk361.rds")
 traf61 <- read_rds("traf61.rds")
 xbp11 <- read_rds("xbp11.rds")
 all1 <- read_rds("all1.rds")
+corplot <- readPNG("corplot.png")
+all2 <- read_rds("all2.rds")
+all3 <- read_rds("all3.rds")
+sex1 <- read_rds("sex1.rds")
+knock1 <- read_rds("knock1.rds")
+rkc <- read_rds("rkc.rds")
+res.df <- read_rds("res.rds")
 
 ui <- fluidPage(
   useShinyjs(),
@@ -61,9 +81,12 @@ ui <- fluidPage(
       "Disease and Background",
       titlePanel("X-linked Dystonia Parkinsonism"),
       br(),
-      plotOutput("boxy")
+      plotOutput("boxy"),
+      plotOutput("sexy"),
+      plotOutput("knockout"),
+      plotOutput("sknockout")
     ),
-    tabPanel("Eye Scores",
+    tabPanel("Viability Scores",
              h2("Analysis of viability across months"),
              h4("Click to see the viability for each vial of the knockdown
                 genes, pathway trends, and linear correlation across time!"),
@@ -81,10 +104,15 @@ ui <- fluidPage(
          Trends.")
     )
     )),
-    tabPanel("Viability"
-    ),
     tabPanel(
-      "Trends"
+      "Trends",
+      titlePanel("Overall Takeaways"),
+      br(),
+      mainPanel(
+        plotOutput("compPlot"),
+        plotOutput("weekday"),
+        plotOutput("eyes")
+      )
     ),
     tabPanel(
       "About",
@@ -105,6 +133,7 @@ server <- function(input, output, session) {
   
   data_input <- reactive({
     switch(input$gene1,
+           "All" = all1,
            "ARNTL" = arntl1, 
            "ATF2" = atf21, 
            "DCTN6"= dctn61, 
@@ -125,7 +154,34 @@ server <- function(input, output, session) {
   
   output$viabilityPlot <- renderPlot(data_input())
   
+  output$correlation <- renderImage(corplot)
+  
+  output$weekday <- renderPlot(all2)
+  
+  output$eyes <- renderPlot(all3)
+  
+  output$sexy <- renderPlot(sex1)
+  
+  output$knockout <- renderPlot(knock1)
+  
+
+  output$sknockout <- renderPlot(rkc)
+  
+  output$compPlot <- renderPlot({
+    cor_all <- corr.test(res.df, adjust = "none")
+    cor_plot <- ggcorrplot(cor_all[["r"]], 
+                           hc.order = TRUE, 
+                           type = "lower",
+                           method = "square",
+                           lab = TRUE,
+                           lab_size = 2.5) +
+      labs(title = "Correlation between Word Frequencies")
+    
+    cor_plot
+  })
+    
   output$boxy <- renderPlot(bosploty)
+
   
   output$intro <- renderUI({
     HTML("<b><font size=6> Drosophila Melanogaster and the Race to Find a Cure </font></b>

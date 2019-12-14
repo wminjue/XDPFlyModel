@@ -22,5 +22,11 @@ file_copy("images/traf61.rds", "xdp-model-shiny/traf61.rds")
 file_copy("images/xbp11.rds", "xdp-model-shiny/xbp11.rds")
 file_copy("images/stk361.rds", "xdp-model-shiny/stk361.rds")
 file_copy("images/all1.rds", "xdp-model-shiny/all1.rds")
+file_copy("images/corplot.png", "xdp-model-shiny/corplot.png")
+file_copy("images/all2.rds", "xdp-model-shiny/all2.rds")
 
-
+file_copy("images/all3.rds", "xdp-model-shiny/all3.rds")
+file_copy("images/sex1.rds", "xdp-model-shiny/sex1.rds")
+file_copy("images/knock1.rds", "xdp-model-shiny/knock1.rds")
+file_copy("images/rkc.rds", "xdp-model-shiny/rkc.rds")
+file_copy("images/res.rds", "xdp-model-shiny/res.rds")
