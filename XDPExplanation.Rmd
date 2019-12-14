@@ -20,13 +20,17 @@ library(dplyr)
 library(gt)
 library(tidyr)
 library(mapdata)
+library(rstanarm)
 ```
+## A Preview: The Data Collection Process
+
+This database contains four weeks/420 hours' worth of fly model data, including target genes, sorter, weekday, number of surviving flies, phenotype, and sizes of the right and left eye of every mutant fly. I and 5 other classmates gathered the dataset from LS100 and cleaned it from scratch, as the datasheets used by the student researchers were completely unusable for code processing purposes, and often I had to pick up their scratch paper to get accurate data on eye sizes for every individual fly in the 18000+ dataset. A majority of the dataset had to be input by hand. Initially I abbreviated the numbers in each vial categorically, but realized it was not ideal for bar plots and scatterplots, so manually added correct number of replicate entries for all flies. Original data can be found [here](https://drive.google.com/open?id=1FQpT1aZWjhlm-Inn_hrF55AL-AXEOI7F) for reference.
+
+Having only obtained the complete dataset after it went through the approval process from XDP Center researchers, I pivoted my project at the last minutes. I have attempted to point out the most salient predictors and methodology pitfalls I observed in the fly model, which was originally intended to be analyzed for eye size instead of survival rate of mutant flies. Below are all the graphs I produced for my Shiny App, which is 
+
 
 ```{r statveri, include = FALSE, message = F}
 dir.create("statdata")
-
-#This database contains four weeks of fly model data, including target genes, sorter, weekday, number of surviving flies, phenotype, and sizes of the right and left eye of every mutant fly. I gathered the dataset and cleaned it from scratch, as the datasheets used by the student researchers were completely unusable for code processing purposes. 
-
 #Read in stats data sheets
 
 f923p <- read_xlsx("statdata/923fly.xlsx") %>% 
@@ -141,7 +145,7 @@ mf  %>% ggplot(aes(fill = sex, x = gene, color = knockdown)) + geom_bar(position
 ```{r eyecorrelation, echo = F, warning = F, message = F}
 #Scatterplot of eye correlation between right and left eye sizes for every gene. Since there are only 5 possible values on both axes, I jittered the points and used dashed lines to indicate concentration in a particular size match.
 
-mf %>%
+nada <- mf %>%
   filter(knockdown == "T") %>% 
   ggplot(aes(x = right, y = left)) + geom_point(shape = ".") + geom_jitter(aes(colour = gene, shape = pathway)) + geom_smooth(method = "lm") + theme(
     panel.background = element_rect(
@@ -160,6 +164,9 @@ mf %>%
     subtitle = "Positive Trend Noted for Eye Sizes, Indicating Knockdown Rescues Tend to Rescue Both Eyes"
   )
 
+model3.obj <- stan_glm(left ~ right, data = mf)
+
+model3.obj
 ```
 
 ```{r vialbilities, message= F}
@@ -191,6 +198,8 @@ vialbility2 <- mf %>%
 
 ggplot(vialbility2, aes(x = date, y = viability, color = gene)) + geom_point() + geom_jitter() + geom_smooth(method = "lm", color="black") + ylim(0,100) + labs(title = "Changes in Viability Over Time", subtitle = "Percentage of Surviving Knockdown Flies out of Total Vial Population", color = "Knockdown Gene", caption = "Viability calculated for flies counted daily per vial.", x = "Date", y = "Viability") + guides(col = guide_legend(nrow = 10))
 
+model2 <- stan_glm(viability ~ date, data = vialbility2)
+model2
 
 vialbility3 <- mf %>%
   group_by(weekday, gene, vial) %>%
@@ -213,6 +222,11 @@ vialbility3$weekday <- as.numeric(vialbility3$weekday)
 # Formerly used to rearrange axis: vialbility3$weekday = factor(vialbility3$weekday, levels = c("M", "T", "W", "H", "F"))
 
 ggplot(vialbility3, aes(x = weekday, y = viability, color = gene)) + geom_point() + geom_jitter() + geom_smooth(method = "lm", color="black") + ylim(0,100) + labs(title = "Changes in Viability Over Days of the Week", subtitle = "Percentage of Surviving Knockdown Flies out of Total Vial Population", color = "Knockdown Gene", caption = "Viability calculated for flies counted daily per vial.", x = "Day of Week(1-5 = M-F)", y = "Viability") + guides(col = guide_legend(nrow = 10)) + geom_smooth(method = "lm", color = "black")
+
+model.obj <- stan_glm(viability ~ weekday, data = vialbility3) 
+
+model.obj
+
 ```
 
 ```{r piechart, echo = F, message = F, include = FALSE}
@@ -223,7 +237,6 @@ eyebility <- mf %>%
   select(-date, -weekday, -sex, -knockdown, -pathway, -week) %>%
   view()
 ```
-
 
 
 ```{r mappingxdp, include = F}
@@ -350,15 +363,12 @@ vialbility3$weekday[vialbility3$weekday == "F"] <- 5
 
 vialbility3$weekday <- as.numeric(vialbility3$weekday)
 
-arntl2 <- ggplot(vialbility3, aes(x = weekday, y = viability, color = gene)) + geom_point() + geom_jitter() + geom_smooth(method = "lm", color="black") + ylim(0,100) + labs(title = "Changes in Viability Over Days of the Week", subtitle = "Percentage of Surviving Knockdown Flies out of Total Vial Population", color = "Knockdown Gene", caption = "Viability calculated for flies counted daily per vial.", x = "Day of Week(1-5 = M-F)", y = "Viability") + guides(col = guide_legend(nrow = 10)) + geom_smooth(method = "lm", color = "black")
-
-write_rds(all2, "images/all2.rds")
+ggplot(vialbility3, aes(x = weekday, y = viability, color = gene)) + geom_point() + geom_jitter() + geom_smooth(method = "lm", color="black") + ylim(0,100) + labs(title = "Changes in Viability Over Days of the Week", subtitle = "Percentage of Surviving Knockdown Flies out of Total Vial Population", color = "Knockdown Gene", caption = "Viability calculated for flies counted daily per vial.", x = "Day of Week(1-5 = M-F)", y = "Viability") + guides(col = guide_legend(nrow = 10)) + geom_smooth(method = "lm", color = "black")
 
 
-all2 <- ggplot(vialbility3, aes(x = weekday, y = viability, color = gene)) + geom_point() + geom_jitter() + geom_smooth(method = "lm", color="black") + ylim(0,100) + labs(title = "Changes in Viability Over Days of the Week", subtitle = "Percentage of Surviving Knockdown Flies out of Total Vial Population", color = "Knockdown Gene", caption = "Viability calculated for flies counted daily per vial.", x = "Day of Week(1-5 = M-F)", y = "Viability") + guides(col = guide_legend(nrow = 10)) + geom_smooth(method = "lm", color = "black")
 
-all1
-write_rds(all2, "images/all2.rds")
+ggplot(vialbility3, aes(x = weekday, y = viability, color = gene)) + geom_point() + geom_jitter() + geom_smooth(method = "lm", color="black") + ylim(0,100) + labs(title = "Changes in Viability Over Days of the Week", subtitle = "Percentage of Surviving Knockdown Flies out of Total Vial Population", color = "Knockdown Gene", caption = "Viability calculated for flies counted daily per vial.", x = "Day of Week(1-5 = M-F)", y = "Viability") + guides(col = guide_legend(nrow = 10)) + geom_smooth(method = "lm", color = "black")
+
 ```
 
 ```

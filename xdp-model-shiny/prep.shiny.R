@@ -3,7 +3,8 @@ library(ggplot2)
 library(sf)
 library(fs)
 
-#Copy all rds image files into the Shiny folder for direct access
+#Copy all rds image files into the Shiny folder for direct access. This is disgusting and;
+#simply loading the cleaned files into the app.R costs much less time. 
 
 file_copy("images/boxploty.rds", "xdp-model-shiny/boxploty.rds")
 file_copy("images/arntl1.rds", "xdp-model-shiny/arntl1.rds")
@@ -20,11 +21,11 @@ file_copy("images/relb1.rds", "xdp-model-shiny/relb1.rds")
 file_copy("images/p4ha11.rds", "xdp-model-shiny/p4ha11.rds")
 file_copy("images/traf61.rds", "xdp-model-shiny/traf61.rds")
 file_copy("images/xbp11.rds", "xdp-model-shiny/xbp11.rds")
+file_copy("images/mapk11.rds", "xdp-model-shiny/mapk11.rds")
 file_copy("images/stk361.rds", "xdp-model-shiny/stk361.rds")
 file_copy("images/all1.rds", "xdp-model-shiny/all1.rds")
 file_copy("images/corplot.png", "xdp-model-shiny/corplot.png")
 file_copy("images/all2.rds", "xdp-model-shiny/all2.rds")
-
 file_copy("images/all3.rds", "xdp-model-shiny/all3.rds")
 file_copy("images/sex1.rds", "xdp-model-shiny/sex1.rds")
 file_copy("images/knock1.rds", "xdp-model-shiny/knock1.rds")
