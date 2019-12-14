@@ -22,6 +22,7 @@ library(dplyr)
 library(gt)
 library(tidyr)
 library(mapdata)
+library(vembedr)
 library(ggcorrplot)
 library(png)
 library(corrplot)
@@ -122,6 +123,7 @@ ui <- fluidPage(
       htmlOutput("intro"),
       htmlOutput("hitter"),
       uiOutput("ls100"),
+      uiOutput("video"),
       htmlOutput("aboutme")
     )
   )
@@ -291,6 +293,7 @@ server <- function(input, output, session) {
          to be statisticaly significant may be imparting more impact than
          first meets the eye. ")
   })
+  output$video <- renderUI({embed_url("https://youtu.be/kBh5o1HAQgc")})
   
   output$correlation <- renderImage(corplot)
   
